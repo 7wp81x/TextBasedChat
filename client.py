@@ -61,7 +61,7 @@ async def authenticate(ws):
             return await authenticate(ws)
 
 async def chat_client():
-    async with websockets.connect('ws://localhost:8090') as ws:
+    async with websockets.connect('wss://textbasedchat.onrender.com') as ws:
         auth = json.loads(await authenticate(ws))
         if not auth.get('success'):
             LOG_ERROR("Authentication failed")
