@@ -2,7 +2,7 @@ const WebSocket = require('ws');
 const fs = require('fs');
 const crypto = require('crypto');
 
-const PORT = 8090;
+const PORT = 8081;
 const USERS_FILE = 'users.json';
 let users = {};
 
@@ -86,6 +86,19 @@ server.on('connection', (ws, req) => {
           }
         });
       }
+
+      else if (action === 'get_online_users') {
+          const onlineUsers = Object.values(users)
+              .filter(user => user.online)
+              .map(user => user.nickname);
+          
+          ws.send(JSON.stringify({
+              type: 'online_users',
+              data: onlineUsers
+          }));
+      }
+
+      
     } catch (e) {
       console.error('Message error:', e);
     }
