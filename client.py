@@ -12,7 +12,7 @@ import sys
 from auth import authenticate
 LOGIN_FILE = 'login.json'
 MESSAGE_HISTORY_SIZE = 1000
-REFRESH_RATE = 0.01  # seconds between display updates
+REFRESH_RATE = 0.01  
 
 COLOR_NORMAL = 10
 COLOR_SYSTEM = 11
@@ -25,9 +25,9 @@ COLOR_ERROR = 17
 COLOR_WARNING = 18
 COLOR_HIGHLIGHT = 19
 
-# Nickname color range
-COLOR_NICK_BASE = 20  # Start of nickname color range
-MAX_NICK_COLORS = 6  # Number of distinct colors for nicknames
+
+COLOR_NICK_BASE = 20
+MAX_NICK_COLORS = 6 
 
 def log_timestamp():
     return time.strftime("[%H:%M:%S]", time.localtime())
@@ -36,17 +36,14 @@ def init_colors():
     curses.start_color()
     curses.use_default_colors()
     
-    # Define custom colors if supported (for terminals that allow it)
     if curses.can_change_color():
         try:
-            # Define some custom colors (RGB values 0-1000)
             curses.init_color(100, 800, 800, 800)  # Bright white
             curses.init_color(101, 1000, 500, 0)   # Orange
             curses.init_color(102, 200, 800, 200)   # Pastel green
         except:
             pass
     
-    # Initialize base color pairs with better contrast
     curses.init_pair(COLOR_NORMAL, curses.COLOR_WHITE, -1)
     curses.init_pair(COLOR_SYSTEM, curses.COLOR_YELLOW, -1)
     curses.init_pair(COLOR_TIMESTAMP, curses.COLOR_CYAN, -1)
@@ -57,7 +54,6 @@ def init_colors():
     curses.init_pair(COLOR_WARNING, curses.COLOR_YELLOW, -1)
     curses.init_pair(COLOR_HIGHLIGHT, curses.COLOR_MAGENTA, -1)
     
-    # Initialize nickname colors with better distinctiveness
     curses.init_pair(COLOR_NICK_BASE + 0, curses.COLOR_GREEN, -1)       # Green
     curses.init_pair(COLOR_NICK_BASE + 1, curses.COLOR_MAGENTA, -1)    # Magenta
     curses.init_pair(COLOR_NICK_BASE + 2, curses.COLOR_RED, -1)        # Red
@@ -68,12 +64,10 @@ def init_colors():
     curses.init_pair(COLOR_NICK_BASE + 7, 102, -1)                     # Pastel green (custom if available)
 
 def get_nick_color(nick):
-    """Get consistent color for a nickname using hash"""
     nick_hash = hash(nick)
     return COLOR_NICK_BASE + (abs(nick_hash) % MAX_NICK_COLORS)
 
 def wrap_text(text, width):
-    """Wrap text to fit within the specified width."""
     if not text:
         return []
     
@@ -97,29 +91,23 @@ def wrap_text(text, width):
     return lines
 
 async def curses_main(stdscr):
-    # Initialize colors
     init_colors()
     
-    # Initialize curses with non-blocking input
     curses.curs_set(0)
-    curses.halfdelay(1)  # 1/10th second timeout for getch()
+    curses.halfdelay(1) 
     stdscr.nodelay(True)
     
-    # Create windows
     height, width = stdscr.getmaxyx()
     msg_win = curses.newwin(height - 3, width, 0, 0)
     input_win = curses.newwin(3, width, height - 3, 0)
     input_win.keypad(True)
 
-    # Scroll position tracking
     scroll_pos = 0
     max_scroll = 0
     last_display_update = 0
 
-    # Connect to server
-    uri = 'ws://localhost:8081'
+    uri = 'wss://textbasedchat.onrender.com'
     async with websockets.connect(uri, ping_interval=None) as ws:
-        # Authenticate - pass stdscr to the auth function
         auth_response = await authenticate(ws, stdscr)
         auth = json.loads(auth_response)
         if not auth.get('success'):
@@ -166,7 +154,7 @@ async def curses_main(stdscr):
                         wrapped_messages.extend(wrap_text(full_msg[0], width - 1))
 
 
-                    elif msg['type'] == 'online_users':  # Add this new condition
+                    elif msg['type'] == 'online_users':
                         users_list = ", ".join(msg['data'])
                         full_msg = (f"{timestamp} Online users: {users_list}", COLOR_SYSTEM)
                         messages.append(full_msg)
@@ -215,7 +203,6 @@ async def curses_main(stdscr):
 
             msg_win.clear()
 
-            # Re-wrap all messages dynamically
             all_wrapped = []
             for msg in messages:
                 if isinstance(msg, tuple):
@@ -223,7 +210,7 @@ async def curses_main(stdscr):
                 else:
                     text, colors = msg, COLOR_NORMAL
                 
-                wrapped = wrap_text(text, width - 2)  # leave margin
+                wrapped = wrap_text(text, width - 2)
                 for line in wrapped:
                     all_wrapped.append((line, colors))
 
@@ -237,16 +224,14 @@ async def curses_main(stdscr):
             for i, (line, colors) in enumerate(all_wrapped[start_idx:end_idx]):
                 try:
                     if isinstance(colors, tuple):
-                        # Handle multi-color message format
                         parts = line.split(' ', 2)
                         if len(parts) >= 3:
-                            # Timestamp
                             msg_win.addstr(i, 0, parts[0], curses.color_pair(colors[0]))
                             msg_win.addstr(" ")
-                            # Nickname
+                            
                             msg_win.addstr(parts[1], curses.color_pair(colors[1]))
                             msg_win.addstr(" ")
-                            # Message
+
                             msg_win.addstr(parts[2], curses.color_pair(colors[2]))
                         else:
                             msg_win.addstr(i, 0, line, curses.color_pair(COLOR_NORMAL))
@@ -266,7 +251,6 @@ async def curses_main(stdscr):
             while True:
                 current_time = time.time()
                 
-                # Handle window resize
                 new_height, new_width = stdscr.getmaxyx()
                 if new_height != height or new_width != width:
                     height, width = new_height, new_width
@@ -276,7 +260,6 @@ async def curses_main(stdscr):
                     stdscr.clear()
                     stdscr.refresh()
                     
-                    # Re-wrap all messages with new width
                     wrapped_messages = []
                     for msg in messages:
                         wrapped_messages.extend(wrap_text(msg[0], width - 1))
@@ -285,27 +268,24 @@ async def curses_main(stdscr):
                     scroll_pos = min(scroll_pos, max_scroll)
                     message_updated = True
 
-                # Update display
                 update_display()
 
-                # Draw input window
                 input_win.clear()
                 input_win.border()
                 input_win.attron(curses.color_pair(COLOR_BORDER))
                 input_win.box()
                 input_win.attroff(curses.color_pair(COLOR_BORDER))
                 
-                visible_width = width - len(nickname) - 4  # account for "nickname: " and padding
-                visible_buffer = buffer[-visible_width:]  # show only last part that fits
+                visible_width = width - len(nickname) - 4
+                visible_buffer = buffer[-visible_width:]
                 input_win.addstr(1, 2, f"{nickname}: ", curses.color_pair(COLOR_NICKNAME))
                 input_win.addstr(visible_buffer, curses.color_pair(COLOR_INPUT))
 
                 input_win.refresh()
 
-                # Handle input
                 try:
                     ch = input_win.getch()
-                    if ch != -1:  # Only process if we have actual input
+                    if ch != -1:  
                         if ch in [10, 13]:  # Enter key
                             if buffer.strip():
                                 if buffer.strip().lower() == "/quit":
@@ -344,23 +324,23 @@ async def curses_main(stdscr):
                             scroll_pos -= 1
                             message_updated = True
 
-                        elif ch == curses.KEY_PPAGE:  # Page Up - scroll up (towards older messages)
+                        elif ch == curses.KEY_PPAGE:
                             scroll_pos = min(scroll_pos + (height - 4), max_scroll)
                             message_updated = True
-                        elif ch == curses.KEY_NPAGE:  # Page Down - scroll down (towards newer messages)
+                        elif ch == curses.KEY_NPAGE:
                             scroll_pos = max(scroll_pos - (height - 4), 0)
                             message_updated = True
-                        elif ch == curses.KEY_HOME:  # Scroll to top (oldest messages)
+                        elif ch == curses.KEY_HOME: 
                             scroll_pos = max_scroll
                             message_updated = True
-                        elif ch == curses.KEY_END:  # Scroll to bottom (newest messages)
+                        elif ch == curses.KEY_END: 
                             scroll_pos = 0
                             message_updated = True
 
                 except curses.error:
                     pass
 
-                await asyncio.sleep(0.01)  # Small sleep to prevent CPU overuse
+                await asyncio.sleep(0.01)
         finally:
             receiver_task.cancel()
             try:
@@ -371,11 +351,10 @@ async def curses_main(stdscr):
 def restore_terminal():
     fd = sys.stdin.fileno()
     if os.isatty(fd):
-        # Restore sane settings
         attrs = termios.tcgetattr(fd)
-        attrs[3] |= termios.ECHO | termios.ICANON  # lflags: turn ECHO and canonical mode back on
+        attrs[3] |= termios.ECHO | termios.ICANON 
         termios.tcsetattr(fd, termios.TCSADRAIN, attrs)
-        print("\033[?25h", end="", flush=True)  # Show cursor
+        print("\033[?25h", end="", flush=True)  
 
 def main():
     try:

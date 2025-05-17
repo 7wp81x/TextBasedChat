@@ -1,8 +1,11 @@
 const WebSocket = require('ws');
+const http = require('http');
 const fs = require('fs');
 const crypto = require('crypto');
+const url = require('url');
 
-const PORT = 8081;
+const WS_PORT = 8081;
+const HTTP_PORT = 8080;
 const USERS_FILE = 'users.json';
 let users = {};
 
@@ -16,12 +19,27 @@ function hashPassword(password) {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
 
+// Create HTTP server
+const httpServer = http.createServer((req, res) => {
+  const reqUrl = url.parse(req.url, true);
+  
+  // Handle specific robot endpoint
+  if (reqUrl.pathname === '/getuptimerb') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'ok', message: 'Uptime robot check' }));
+    return;
+  }
+  
+  // Reject all other requests
+  res.writeHead(503, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ error: 'Forbidden' }));
+});
 
-
-const server = new WebSocket.Server({ port: PORT });
+// Create WebSocket server
+const wss = new WebSocket.Server({ port: WS_PORT });
 
 function broadcastSystemMessage(message) {
-  server.clients.forEach(client => {
+  wss.clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(JSON.stringify({
         type: 'system',
@@ -31,8 +49,7 @@ function broadcastSystemMessage(message) {
   });
 }
 
-
-server.on('connection', (ws, req) => {
+wss.on('connection', (ws, req) => {
   ws.on('message', (message) => {
     try {
       const { action, data } = JSON.parse(message);
@@ -72,12 +89,11 @@ server.on('connection', (ws, req) => {
         
         broadcastSystemMessage(`${user.nickname}|connected`);
       }
-
       else if (action === 'message') {
         if (!ws.user) return;
         const msg = `${ws.user.nickname}|${data.text}`;
         
-        server.clients.forEach(client => {
+        wss.clients.forEach(client => {
           if (client !== ws && client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify({ 
               type: 'message',
@@ -86,7 +102,6 @@ server.on('connection', (ws, req) => {
           }
         });
       }
-
       else if (action === 'get_online_users') {
           const onlineUsers = Object.values(users)
               .filter(user => user.online)
@@ -97,8 +112,6 @@ server.on('connection', (ws, req) => {
               data: onlineUsers
           }));
       }
-
-      
     } catch (e) {
       console.error('Message error:', e);
     }
@@ -108,10 +121,14 @@ server.on('connection', (ws, req) => {
     if (ws.user && users[ws.user.username]) {
       users[ws.user.username].online = false;
       const user = users[ws.user.username];
-
       broadcastSystemMessage(`${user.nickname}|disconnected`);
     }
   });
 });
 
-console.log(`Auth server running on ws://localhost:${PORT}`);
+// Start both servers
+httpServer.listen(HTTP_PORT, () => {
+  console.log(`HTTP server running on http://localhost:${HTTP_PORT}`);
+});
+
+console.log(`WebSocket server running on ws://localhost:${WS_PORT}`);

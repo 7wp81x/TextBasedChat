@@ -33,7 +33,6 @@ async def authenticate(ws, stdscr):
     stdscr.clear()
     stdscr.refresh()
     
-    # Create a subwindow for auth to avoid messing with main window
     height, width = stdscr.getmaxyx()
     auth_win = curses.newwin(height, width, 0, 0)
     auth_win.keypad(True)
