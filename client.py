@@ -106,7 +106,7 @@ async def curses_main(stdscr):
     max_scroll = 0
     last_display_update = 0
 
-    uri = 'wss://textbasedchat.onrender.com'
+    uri = 'wss://YOUR_SERVER_HERE.com'
     async with websockets.connect(uri, ping_interval=None) as ws:
         auth_response = await authenticate(ws, stdscr)
         auth = json.loads(auth_response)
