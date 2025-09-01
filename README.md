@@ -1,15 +1,15 @@
 # TextChat
 Simple text based chat via websocket with python client.
 
-# Server Configuration:
+## Server Configuration:
 - open the `chatserver.js` file then change the `wss://YOUR_SERVER_HERE.com` to your server.
 - You can use render.com to host he chatserver.js
 
 ## Install client on termux
 ```
 apt install git python3 -y
-git clone https://github.com/7wp81x/TextBasedChat
-cd TextBasedChat
+git clone https://github.com/7wp81x/TextChat
+cd TextChat
 pip3 install aioconsole websockets
 python3 client.py
 ```
